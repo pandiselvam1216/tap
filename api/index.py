@@ -58,8 +58,8 @@ async def detect_faucets(image: UploadFile = File(...)):
                 return {"error": True, "detail": json_data}
                 
             print(f"DEBUG: Roboflow Success. JSON Structure: {list(json_data.keys())}")
-            if "outputs" in json_data:
-                print(f"DEBUG: Outputs count: {len(json_data['outputs'])}")
+            if "outputs" in json_data and len(json_data["outputs"]) > 0:
+                print(f"DEBUG: First Output Keys: {list(json_data['outputs'][0].keys())}")
             return json_data
 
     except Exception as e:

@@ -276,17 +276,38 @@ function App() {
                                 />
                                 {viewMode === 'visualization' && (
                                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {results?.outputs?.[0]?.visualization || (results?.[0]?.visualization) ? (
-                                            <img
-                                                src={`data:image/jpeg;base64,${results?.outputs?.[0]?.visualization || results?.[0]?.visualization}`}
-                                                alt="Roboflow Visualization"
-                                                style={{ maxWidth: '100%', borderRadius: '8px' }}
-                                            />
-                                        ) : (
-                                            <div style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
-                                                Visualization not available for this workflow.<br />Using Smart Canvas instead.
-                                            </div>
-                                        )}
+                                        {(() => {
+                                            const findVisual = (obj) => {
+                                                if (!obj || typeof obj !== 'object') return null;
+                                                if (obj.visualization && typeof obj.visualization === 'string') return obj.visualization;
+                                                if (obj.image && typeof obj.image === 'string' && obj.image.length > 500) return obj.image;
+
+                                                if (Array.isArray(obj)) {
+                                                    for (const item of obj) {
+                                                        const found = findVisual(item);
+                                                        if (found) return found;
+                                                    }
+                                                } else {
+                                                    for (const key in obj) {
+                                                        const found = findVisual(obj[key]);
+                                                        if (found) return found;
+                                                    }
+                                                }
+                                                return null;
+                                            };
+                                            const visualData = findVisual(results);
+                                            return visualData ? (
+                                                <img
+                                                    src={`data:image/jpeg;base64,${visualData}`}
+                                                    alt="Roboflow Visualization"
+                                                    style={{ maxWidth: '100%', borderRadius: '8px' }}
+                                                />
+                                            ) : (
+                                                <div style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
+                                                    Visualization not available for this workflow.<br />Using Smart Canvas instead.
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 )}
                             </>
