@@ -1,9 +1,9 @@
 import os
 import io
-import tempfile
+import base64
+import httpx
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from inference_sdk import InferenceHTTPClient
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,58 +24,43 @@ API_KEY = "KT6nlWTC4R2PTGWZ80Pa"
 WORKSPACE_NAME = "neura-global-3e6o8"
 WORKFLOW_ID = "find-faucets"
 
-client = InferenceHTTPClient(
-    api_url="https://detect.roboflow.com",
-    api_key=API_KEY
-)
-
 @app.get("/api/health")
 async def health_check():
-    try:
-        return {"status": "online", "message": "Backend is live and connected to Roboflow"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    return {"status": "online", "message": "Backend is live and lightweight"}
 
 @app.post("/api/detect")
 async def detect_faucets(image: UploadFile = File(...)):
-    temp_file_path = None
     try:
         contents = await image.read()
-        print(f"Received image: {image.filename}, size: {len(contents)} bytes")
         
-        # Use /tmp for serverless environments
-        suffix = os.path.splitext(image.filename)[1]
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir="/tmp") as tmp:
-            tmp.write(contents)
-            temp_file_path = tmp.name
+        # Convert image to base64
+        base64_image = base64.b64encode(contents).decode("utf-8")
         
-        print(f"Temporary file created at: {temp_file_path}")
+        # Roboflow Workflow API Endpoint
+        url = f"https://detect.roboflow.com/workflow/{WORKSPACE_NAME}/{WORKFLOW_ID}"
+        
+        payload = {
+            "api_key": API_KEY,
+            "inputs": {
+                "image": {
+                    "type": "base64",
+                    "value": base64_image
+                }
+            }
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, json=payload)
             
-        try:
-            result = client.run_workflow(
-                workspace_name=WORKSPACE_NAME,
-                workflow_id=WORKFLOW_ID,
-                images={
-                    "image": temp_file_path
-                },
-                use_cache=True
-            )
-            print("Roboflow workflow execution successful")
-            return result
-        except Exception as sdk_err:
-            print(f"Roboflow SDK Error: {str(sdk_err)}")
-            raise HTTPException(status_code=502, detail=f"AI Model Error: {str(sdk_err)}")
-            
+            if response.status_code != 200:
+                print(f"Roboflow API Error: {response.status_code} - {response.text}")
+                raise HTTPException(status_code=502, detail=f"AI Model Error: {response.text}")
+                
+            return response.json()
+
     except Exception as e:
         print(f"CRITICAL API ERROR: {str(e)}")
-        # Log the full traceback in a real production app
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if temp_file_path and os.path.exists(temp_file_path):
-            try:
-                os.remove(temp_file_path)
-            except:
-                pass
 
 # For local testing
 if __name__ == "__main__":

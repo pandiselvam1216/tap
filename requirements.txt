@@ -1,5 +1,4 @@
 fastapi
-inference-sdk
+httpx
 python-multipart
 python-dotenv
-opencv-python-headless
