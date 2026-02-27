@@ -62,10 +62,18 @@ function App() {
     // Aggressive recursive search for detections
     const findDetections = (obj) => {
         if (!obj || typeof obj !== 'object') return null;
+        if (obj.error) return null; // Handle backend error objects
+
+        // Some workflow responses are inside an 'outputs' list
+        if (Array.isArray(obj.outputs) && obj.outputs.length > 0) {
+            return findDetections(obj.outputs[0]);
+        }
+
         if (Array.isArray(obj)) {
             // Check if this array looks like a list of detections
             if (obj.length > 0 && typeof obj[0] === 'object' &&
-                (obj[0].x !== undefined || obj[0].confidence !== undefined || obj[0].box_2d !== undefined)) {
+                (obj[0].x !== undefined || obj[0].confidence !== undefined ||
+                    obj[0].box_2d !== undefined || obj[0].box !== undefined)) {
                 return obj;
             }
             for (const item of obj) {
@@ -79,7 +87,7 @@ function App() {
             if (Array.isArray(obj.results)) return findDetections(obj.results);
 
             for (const key in obj) {
-                if (key === 'visualization') continue; // Skip large binary data
+                if (key === 'visualization' || key === 'image') continue; // Skip binary
                 const found = findDetections(obj[key]);
                 if (found) return found;
             }

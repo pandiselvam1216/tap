@@ -33,11 +33,11 @@ async def detect_faucets(image: UploadFile = File(...)):
     try:
         contents = await image.read()
         
-        # Convert image to base64
-        base64_image = base64.b64encode(contents).decode("utf-8")
+        # Correct Roboflow Serverless Workflow API Endpoint
+        url = f"https://serverless.roboflow.com/{WORKSPACE_NAME}/workflows/{WORKFLOW_ID}/outputs"
         
-        # Roboflow Workflow API Endpoint
-        url = f"https://detect.roboflow.com/workflow/{WORKSPACE_NAME}/{WORKFLOW_ID}"
+        # Alternatively, if /outputs is not needed:
+        # url = f"https://serverless.roboflow.com/{WORKSPACE_NAME}/workflows/{WORKFLOW_ID}"
         
         payload = {
             "api_key": API_KEY,
@@ -49,12 +49,12 @@ async def detect_faucets(image: UploadFile = File(...)):
             }
         }
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(url, json=payload)
             
             if response.status_code != 200:
-                print(f"Roboflow API Error: {response.status_code} - {response.text}")
-                raise HTTPException(status_code=502, detail=f"AI Model Error: {response.text}")
+                print(f"ROBOFLOW ERROR {response.status_code}: {response.text}")
+                return {"error": True, "detail": response.text, "status": response.status_code}
                 
             return response.json()
 
