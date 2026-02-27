@@ -37,8 +37,8 @@ async def detect_faucets(image: UploadFile = File(...)):
         # Convert image to base64
         base64_image = base64.b64encode(contents).decode("utf-8")
         
-        # Correct Roboflow Serverless Workflow API Endpoint
-        url = f"https://serverless.roboflow.com/{WORKSPACE_NAME}/workflows/{WORKFLOW_ID}/outputs"
+        # Verified Roboflow Workflow API Endpoint
+        url = f"https://detect.roboflow.com/infer/workflows/{WORKSPACE_NAME}/{WORKFLOW_ID}"
         
         payload = {
             "api_key": API_KEY,
@@ -52,11 +52,15 @@ async def detect_faucets(image: UploadFile = File(...)):
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(url, json=payload)
             
+            json_data = response.json()
             if response.status_code != 200:
-                print(f"ROBOFLOW ERROR {response.status_code}: {response.text}")
-                return {"error": True, "detail": response.text, "status": response.status_code}
+                print(f"ROBOFLOW ERROR {response.status_code}: {json_data}")
+                return {"error": True, "detail": json_data}
                 
-            return response.json()
+            print(f"DEBUG: Roboflow Success. JSON Structure: {list(json_data.keys())}")
+            if "outputs" in json_data:
+                print(f"DEBUG: Outputs count: {len(json_data['outputs'])}")
+            return json_data
 
     except Exception as e:
         print(f"CRITICAL API ERROR: {str(e)}")
