@@ -5,6 +5,6 @@
 # Netlify redirects to solve CORS and proxy API calls to Render
 [[redirects]]
   from = "/api/*"
-  to = "https://faucet-vision-api.onrender.com/api/:splat"
+  to = "https://tap-dl37.onrender.com/api/:splat"
   status = 200
   force = true
