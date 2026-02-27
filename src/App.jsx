@@ -279,9 +279,20 @@ function App() {
                                         {(() => {
                                             const findVisual = (obj) => {
                                                 if (!obj || typeof obj !== 'object') return null;
-                                                if (obj.visualization && typeof obj.visualization === 'string') return obj.visualization;
+
+                                                // 1. Direct search in common keys
+                                                if (obj.visualization) {
+                                                    if (typeof obj.visualization === 'string') return obj.visualization;
+                                                    if (obj.visualization.value) return obj.visualization.value;
+                                                }
                                                 if (obj.image && typeof obj.image === 'string' && obj.image.length > 500) return obj.image;
 
+                                                // 2. Workflow outputs shortcut
+                                                if (Array.isArray(obj.outputs) && obj.outputs.length > 0) {
+                                                    return findVisual(obj.outputs[0]);
+                                                }
+
+                                                // 3. Recursive search
                                                 if (Array.isArray(obj)) {
                                                     for (const item of obj) {
                                                         const found = findVisual(item);
@@ -289,6 +300,7 @@ function App() {
                                                     }
                                                 } else {
                                                     for (const key in obj) {
+                                                        if (key === 'visualization' || key === 'image' || key === 'predictions') continue;
                                                         const found = findVisual(obj[key]);
                                                         if (found) return found;
                                                     }
@@ -296,13 +308,17 @@ function App() {
                                                 return null;
                                             };
                                             const visualData = findVisual(results);
-                                            return visualData ? (
-                                                <img
-                                                    src={`data:image/jpeg;base64,${visualData}`}
-                                                    alt="Roboflow Visualization"
-                                                    style={{ maxWidth: '100%', borderRadius: '8px' }}
-                                                />
-                                            ) : (
+                                            if (visualData) {
+                                                const imgSrc = visualData.startsWith('data:') ? visualData : `data:image/jpeg;base64,${visualData}`;
+                                                return (
+                                                    <img
+                                                        src={imgSrc}
+                                                        alt="Roboflow Visualization"
+                                                        style={{ maxWidth: '100%', borderRadius: '8px' }}
+                                                    />
+                                                );
+                                            }
+                                            return (
                                                 <div style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
                                                     Visualization not available for this workflow.<br />Using Smart Canvas instead.
                                                 </div>
