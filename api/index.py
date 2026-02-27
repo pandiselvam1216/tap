@@ -32,22 +32,22 @@ async def health_check():
 async def detect_faucets(image: UploadFile = File(...)):
     try:
         contents = await image.read()
+        print(f"DEBUG: Read image {image.filename}, size {len(contents)}")
+        
+        # Convert image to base64
+        base64_image = base64.b64encode(contents).decode("utf-8")
         
         # Correct Roboflow Serverless Workflow API Endpoint
         url = f"https://serverless.roboflow.com/{WORKSPACE_NAME}/workflows/{WORKFLOW_ID}/outputs"
         
-        # Alternatively, if /outputs is not needed:
-        # url = f"https://serverless.roboflow.com/{WORKSPACE_NAME}/workflows/{WORKFLOW_ID}"
-        
         payload = {
             "api_key": API_KEY,
             "inputs": {
-                "image": {
-                    "type": "base64",
-                    "value": base64_image
-                }
+                "image": base64_image
             }
         }
+        
+        print(f"DEBUG: Calling Roboflow at {url}")
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(url, json=payload)
