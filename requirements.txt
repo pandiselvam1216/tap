@@ -2,3 +2,4 @@ fastapi
 inference-sdk
 python-multipart
 python-dotenv
+opencv-python-headless

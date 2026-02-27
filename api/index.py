@@ -38,13 +38,18 @@ async def health_check():
 
 @app.post("/api/detect")
 async def detect_faucets(image: UploadFile = File(...)):
+    temp_file_path = None
     try:
         contents = await image.read()
+        print(f"Received image: {image.filename}, size: {len(contents)} bytes")
         
-        # Use a more cross-platform way for temp files in serverless
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{image.filename}") as tmp:
+        # Use /tmp for serverless environments
+        suffix = os.path.splitext(image.filename)[1]
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir="/tmp") as tmp:
             tmp.write(contents)
             temp_file_path = tmp.name
+        
+        print(f"Temporary file created at: {temp_file_path}")
             
         try:
             result = client.run_workflow(
@@ -55,15 +60,22 @@ async def detect_faucets(image: UploadFile = File(...)):
                 },
                 use_cache=True
             )
-        finally:
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
+            print("Roboflow workflow execution successful")
+            return result
+        except Exception as sdk_err:
+            print(f"Roboflow SDK Error: {str(sdk_err)}")
+            raise HTTPException(status_code=502, detail=f"AI Model Error: {str(sdk_err)}")
             
-        return result
-
     except Exception as e:
-        print(f"DETECTION ERROR: {str(e)}")
+        print(f"CRITICAL API ERROR: {str(e)}")
+        # Log the full traceback in a real production app
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.remove(temp_file_path)
+            except:
+                pass
 
 # For local testing
 if __name__ == "__main__":
